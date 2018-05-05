@@ -1,0 +1,273 @@
+---
+title: "HW3"
+author: "Tina"
+date: "4/7/2018"
+output: html_document
+---
+
+#######2.1 (a) DATA CLEAN UP (i) Read in txt as csv
+```{r}
+ rm(list=ls())
+getwd()
+setwd("/Users/tinapraveen/Desktop/HW3")
+FILES <- list.files( pattern = ".txt")
+for (i in 1:length(FILES)) {
+FILE=read.table(file=FILES[i],header=T)
+write.csv(FILE,file=paste0("/Users/tinapraveen/Desktop/HW3",sub(".txt","",FILES[i]),".csv"))
+}
+df <- read.csv("HW3file19.csv", header=TRUE , stringsAsFactors = FALSE)
+df <- df[ ,-1]
+```
+#######2.1 (a)(ii) Does the data need to be standardized? 
+
+YES
+
+#######2.1 (a) (iii) Extra white spaces and delimiters are handled during conversion and the clean data set is uploaded.
+```{r}
+str(df)
+names(df)
+cols <- names(df)
+cols.char <-"Name"
+cols.num <- cols[!cols %in% cols.char]
+
+df.char <- df[cols.char]
+df.num <- as.data.frame(lapply(df[cols.num],as.numeric))
+df.scaled <- scale(df.num)
+df <- cbind(df.char, df.scaled)
+str(df)
+```
+#######2.1 (b) CLUSTERING
+
+```{r}
+library(cluster)
+library(factoextra)
+#######2.1 (b) (i) Number of clusters is determined as 8 from the silhoutte graph
+fviz_nbclust(df[2:9], kmeans, method="silhouette")
+#######2.1 (b) (ii) Plot Clusters
+fviz_cluster(kmeans(df[2:9], centers=8, nstart=25), data=df[2:9])
+k <- kmeans(df[2:9], centers=8, nstart=25)
+names(k)
+print(k)
+k$totss
+k$withinss
+k$size
+```
+
+#######2.1 (b) (iii)How many observations are in each cluster?
+#K-means clustering with 8 clusters of sizes 9, 17, 2, 17, 9, 3, 1, 8
+#######2.1 (b) (iv) What is the total SSE of the clusters?
+# 520
+#######2.1 (b)(v) What is the SSE of each cluster?
+3.174224 14.918373  2.223560  9.591579  6.337449  4.546254  0.000000  4.244696
+
+#######2.1 (b)(vi) Perform an analysis of each cluster to determine how the mammals are grouped in each cluster, and whether
+that makes sense? 
+
+The clusters do make sense .
+for e.g: River Otter Sea Otter, Sea Lion etc clustered together and in another Cluster we have Porcupine,Pack Rat , Beaver etc being clustered and we have 8 clusters in total.
+
+```{r}
+for( i in 1:8){
+  print(paste("Mammals in cluster", i))
+cluster_mammals<- ((df[c(which(k$cluster == i)), 1] ))
+print (cluster_mammals)
+  
+}
+
+```
+#############2.2 Problem 2: Hierarchical clustering
+
+```{r}
+getwd()
+setwd("/Users/tinapraveen/Desktop/HW3")
+FILES <- list.files( pattern = ".txt")
+for (i in 1:length(FILES)) {
+FILE=read.table(file=FILES[i],header=T)
+write.csv(FILE,file=paste0("/Users/tinapraveen/Desktop/HW3",sub(".txt","",FILES[i]),".csv"))
+}
+df_46 <- read.csv("HW3file46.csv", header=TRUE, stringsAsFactors = FALSE)
+str(df_46)
+df_46 <- df_46[ ,-1]
+row.names(df_46 )<-df_46$Country
+df_46 <- scale(df_46[,2:13])
+#df_46 <- df_46[ ,-1]
+#str(df_46)
+#names(df_46)
+#cols <- names(df_46)
+#cols.char <-"Country"
+#cols.num <- cols[!cols %in% cols.char]
+#df_46.char <- df_46[cols.char]
+#df_46.num <- as.data.frame(lapply(df_46[cols.num],as.numeric))
+#df_46.scaled <- scale(df_46.num)
+#df_46 <- cbind(df_46.char, df_46.scaled)
+#str(df_46)
+
+#library(tidyverse)
+#df_46 %>% remove_rownames %>% column_to_rownames(var="Country")
+
+```
+#############2.2 (a) Run Hierarchical Clustering
+```{r}
+#Single
+
+hc.single <- eclust(df_46[ ,2:12] ,"hclust", hc_method="single")
+fviz_dend(hc.single, show_labels= TRUE, palette="jco", as.ggplot=T)
+# Average
+hc.average <- eclust(df_46[ ,2:12] ,"hclust", hc_method="average")
+fviz_dend(hc.average, show_labels= TRUE, palette="jco", as.ggplot=T)
+# Complete
+hc.complete <- eclust(df_46[ ,2:12] ,"hclust", hc_method="complete")
+fviz_dend(hc.complete, show_labels= TRUE, palette="jco", as.ggplot=T)
+clusters.5 <- cutree(hc.complete, 5 )
+d<-dist(df_46[ ,2:12])
+s <- cluster::silhouette(clusters.5, d)
+summary(s)
+
+```
+#############2.2 (b)
+Singleton Clusters in Linkage method: Single
+Luxemburg and Switzerland speak GE in majority
+West Germany and Austria speak GE  in majority
+Great Britain and Ireland speak En in majority
+This clustering makes sense.
+Singleton Clusters in Linkage method: Average
+Luxemburg and Switzerland speak GE in majority
+West Germany and Austria speak GE  in majority
+Great Britain and Ireland speak EN in majority 
+Belgium and Finland speak EN in equal numbers 
+This clustering makes sense.
+Singleton Clusters in Linkage method: Complete
+West Germany and Austria speak GE  in majority
+Great Britain and Ireland speak EN in majority
+Luxemburg and Switzerland speak GE in majority
+Denmark and Norway speak EN in equal numbers though the language spoken by the majority in both these countries are different. 
+Portugal and Spain speak EN in equal numbers though the language spoken by the majority in both these countries are different. 
+
+#############2.2 (c)
+
+#############2.2 (d)
+Complete linkage method finds most number of singleton clusters and hence this wiould be considered pure.
+#############2.2 (e)
+Number of clusters after cutting at specified height is 5
+#############2.2 (f)
+```{r}
+#Single
+hc.single <- eclust(df_46[ ,2:12] ,k=5,"hclust", hc_method="single")
+fviz_dend(hc.single, show_labels= TRUE, palette="jco", as.ggplot=T)
+# Average
+hc.average <- eclust(df_46[ ,2:12] ,k=5,"hclust", hc_method="average")
+fviz_dend(hc.average, show_labels= TRUE, palette="jco", as.ggplot=T)
+# Complete
+hc.complete <- eclust(df_46[ ,2:12] ,k=5,"hclust", hc_method="complete")
+fviz_dend(hc.complete, show_labels= TRUE, palette="jco", as.ggplot=T)
+
+```
+#############2.2 (g)
+```{r}
+library(fpc)
+fpc::cluster.stats(d, hc.single$cluster)$avg.silwidth
+fpc::cluster.stats(d, hc.average$cluster)$avg.silwidth
+fpc::cluster.stats(d, hc.complete$cluster)$avg.silwidth
+fpc::cluster.stats(d, hc.single$cluster)$dunn
+fpc::cluster.stats(d, hc.average$cluster)$dunn
+fpc::cluster.stats(d, hc.complete$cluster)$dunn
+
+
+```
+#############2.2 (h)
+Considering the average silhouette width,  we will go for Complete linkage
+
+#############2.2 (i)
+
+Considering dunn index , we will go for Average linkage
+
+##############2.3 Problem 3: K-Means and PCA
+##############2.3 a 
+```{r}
+df_hrtu <- read.csv("HTRU_2-small.csv", header=TRUE, stringsAsFactors = FALSE)
+
+pca <- prcomp(scale(df_hrtu))
+pca
+summary(pca)
+##############2.3 a (ii)
+biplot(pca, scale=0 ,col = c("blue","orange"))
+raw <- pca$x[,1:2]
+plot(raw[,1], raw[,2], col=rainbow(nrow(raw)), pch=20)
+
+##############2.3 b
+k <- kmeans(scale(df_hrtu[ ,1:8]), centers=2, nstart=25) 
+
+fviz_cluster(k, data= scale(df_hrtu[ ,1:8]) )  
+##############2.3 b  ii)
+#The clusters are having the shape as the PCA plot. This cpuld occur because we have plotted the PCA agianst 2 dimensions which could explain maximum variance and hence the shapes are nearly same.
+##############2.3 b  iii)) What is the distribution of the observations in each cluster?
+k
+# K-means clustering with 2 clusters of sizes 8847, 1153
+
+#(iv) What is the distribution of the classes in the HTRU2 dataset?
+library(plyr)
+count(df_hrtu, "class")
+#Class  Frequency
+#0	    9041			
+#1	    959	
+
+#(v)
+# Comparing above results cluster with size 8847 could belong to class 0
+# and  cluster with size 1153 could belong to class 1
+
+# (vi) Let’s focus on the larger cluster.
+  cluster_obs <-which(k$cluster == 1)
+  df_cluster1 <- df_hrtu[ cluster_obs , ]
+  count(df_cluster1, "class")
+  
+  # Below is the frequency of classes in the larger cluster
+  # class   freq 
+#    0	    8624			
+ #   1	    223
+  #(vii) Based on the analysis above, which class (1 or 0) do you think the larger cluster represents?
+  
+#  Class 0
+  
+#  (viii) How much variance is explained by the clustering?
+ # 35.9 %
+  
+#  (ix) What is the average Silhouette width of both the clusters?
+dh<-  dist(scale(df_hrtu[ ,1:8]) )
+fpc::cluster.stats(dh, k$cluster)$avg.silwidth
+ # 0.6006794
+
+#(x) What is the per cluster Silhouette width? Based on this, which cluster is good?
+ sil_width <- silhouette(k$cluster , dh)
+summary(sil_width)
+?silhouette
+#Cluster one is good.
+```
+##############2.3 a (i)
+ cumulative variance is explained by the first two components -0.769
+ 
+##############2.3 a (iii)
+ 
+Plot forms 2 clusters based on class 1 and 0
+
+##############2.3 C
+```{r}
+kpca <- kmeans(pca$x[, 1:2], centers=2, nstart=25) 
+fviz_cluster(kpca, data= pca$x[ , 1:2])
+###############2.3 C (i)
+#All of the clusters have more or less same shape . This is because PCA could choose #the dimensions those could explain maximum variance within the dataset
+
+
+#(ii) What is the average Silhouette width of both the clusters?
+dpca<-  dist(pca$x[, 1:2])
+fpc::cluster.stats(dpca, kpca$cluster)$avg.silwidth
+#0.700875
+#(iii) What is the per cluster Silhouette width? Based on this, which cluster is  good?
+sil_width <- silhouette(kpca$cluster , dpca)
+summary(sil_width)
+
+# Cluster one is good.
+#(iv) How do the values of c(ii) and c(iii) compare with those of b(ix) and b(x), respectively?
+
+#c(ii) and c(iii)values are better
+```
+ 
