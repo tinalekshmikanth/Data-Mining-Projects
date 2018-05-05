@@ -1,3 +1,3 @@
 # Data-Mining-Projects
- This repository includes all projects implementing Supervised Learning and Unsupervised Learning.
- The porjects are implemented in R using libraries in CRAN repository
+ This repository includes data mining projects implementing Supervised Learning and Unsupervised Learning algorithms.
+ The projects are implemented in R using libraries in CRAN repository
