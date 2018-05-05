@@ -1,0 +1,181 @@
+---
+title: "HW2"
+author: "Tina"
+date: "3/3/2018"
+output: html_document
+---
+
+
+```{r}
+library(rpart)
+library(caret)
+library(rpart.plot)
+library(ROCR)
+
+rm(list=ls())
+
+getwd()
+
+
+options("digits"=3)
+############ Q:2.1
+set.seed(1122)
+# Load test and train dataset
+adult_train <- read.csv("adult-train(1).csv", header=T, sep=",", comment.char = '#')
+adult_test <- read.csv("adult-test(1).csv", header=T, sep=",", comment.char = '#')
+head(adult_train)
+```
+
+Q.2.1.a
+
+```{r}
+adult_train_del <- which((adult_train$workclass=="?") | (adult_train$native_country=="?") | (adult_train$occupation=="?"))
+adult_train <- adult_train[-(adult_train_del),]
+adult_test_del <- which((adult_test$workclass=="?") | (adult_test$native_country=="?") | (adult_test$occupation=="?"))
+adult_test <- adult_test[-(adult_test_del),]
+```
+QSTN 2.1.b
+QSTN 2.1.b i-top three important predictors in the model? CAPITAL GAIN , OCCUPATION,EDUCATION
+QSTN 2.1.b ii-The first split is done on which predictor?CAPITAL GAIN
+What is the predicted class of the first node?<=50K 
+What is the distribution of observations between the “<=50K” and “>50K” classes at this node? .75, .25
+
+```{r}
+model <- rpart(income ~ ., method="class", data=adult_train)
+summary(model)
+rpart.plot(model, extra=104, fallen.leaves = T, type=4)
+```
+QSTN 2.c
+QSTN 2.c(i) What is the balanced accuracy of the model? 0.726 
+
+(ii) What is the balanced error rate of the model?0.274
+
+(iii) What is the sensitivity?0.948 Specificity?0.504
+(iv) What is the AUC of the ROC curve-0.843
+
+```{r}
+pred <- predict(model, adult_test, type="class")
+confusionMatrix(pred, adult_test[, 15])
+
+pred.rocr <- predict(model, newdata=adult_test, type="prob")[,2]
+f.pred <- prediction(pred.rocr, adult_test$income)
+f.perf <- performance(f.pred, "tpr", "fpr")
+plot(f.perf, colorize=T, lwd=3)
+auc <- performance(f.pred, measure = "auc")
+cat(paste("AUC: ", round(auc@y.values[[1]], 3)))
+```
+QSTN 2.D
+```{r}
+printcp(model)
+rm.index <- sample(which(adult_train$income=="<=50K"), size=15145)
+adult_train_us <- adult_train[-rm.index,]
+
+table(adult_train$income)
+table(adult_train_us$income)
+```
+QSTN 2.E
+(i) In the training dataset, how many observations are in the class “<=50K”? How many are in the class “>50K”? 7508
+QSTN 2.E.iii)
+i) What is the balanced accuracy of this model? 0.803 
+(ii) What is the balanced error rate of this model?0.197
+(iii) What is the sensitivity?0.769 Specificity?0.838
+(iv) What is the AUC of the ROC curve.0.845 Plot the ROC curve.
+
+```{r}
+modelus <- rpart(income ~ ., method="class", data=adult_train_us)
+summary(modelus)
+
+pred <- predict(modelus, adult_test, type="class")
+confusionMatrix(pred, adult_test[, 15])
+
+new.pred.rocr <- predict(modelus, newdata=adult_test, type="prob")[,2]
+new.f.pred <- prediction(new.pred.rocr, adult_test$income)
+new.f.perf <- performance(new.f.pred, "tpr", "fpr")
+plot(new.f.perf, colorize=T, lwd=3)
+new.auc <- performance(new.f.pred, measure = "auc")
+cat(paste("AUC ", round(new.auc@y.values[[1]], 3)))
+
+```
+Question 2.2
+(i) What is the balanced accuracy of the model?0.646
+(ii) What is the accuracy of the model?0.824
+(iii) What is the sensitivity  0.996 and 
+specificity of the model?0.296
+(iv) What is the response class distribution in the test dataset? (That is, how many observations are labeled “>50K” and how many are labeled “<=50K”)?11312 and  1096
+(v) Given the response class distribution, does the sensitivity and specificity make sense?Yes
+(vi)which is the most important variable and which is the least important one? CAPITAL GAIN and NATIVE COUNTRY
+
+```{r}
+library(randomForest)
+set.seed(1122)
+
+rf.model <- randomForest(income ~ ., data=adult_train, importance=T)
+rf.pred <- predict(rf.model, adult_test, type="class")
+confusionMatrix(rf.pred, as.factor(adult_test$income))
+
+varImpPlot(rf.model)
+
+print(rf.model)
+
+mtry <- tuneRF(adult_train[,-15], adult_train[,15], ntreeTry=500, stepFactor=1.5,improve=0.01, 
+              trace=TRUE, plot=TRUE)
+print(mtry)
+
+rf.model_tune <- randomForest(income ~ ., data=adult_train, importance=T, mtry=2)
+rf.pred_tune <- predict(rf.model_tune, adult_test, type="class")
+confusionMatrix(rf.pred_tune, adult_test[,15])
+```
+Question 2.3
+```{r}
+
+library(arules)
+transdata <- read.transactions("groceries.csv",sep=",")
+summary(transdata)
+#(i)
+rules <- apriori(transdata)
+summary(rules)
+inspect(rules)
+#(ii)At support count 0.001 we get atleast 400 rules
+rules <- apriori(transdata, parameter = list(support=0.001))
+summary(rules)
+inspect(rules)
+#(iii) Which item is the most frequently bought and what is its frequency?
+
+# whole milk is the frequently brought item 
+par(mfrow=c(1,2))
+
+itemFrequencyPlot(transdata,
+                  type="relative",
+                  topN=10, # can be changed to the number of interest
+                  horiz=TRUE,
+                  col='steelblue3',
+                  xlab='',
+                  main='Item frequency, relative')
+
+#(iv) Which item is the least frequently bought and what is its frequency?
+#baby food and sound storage system both are infrequent.
+
+par(mar=c(2,10,2,2), mfrow=c(1,2))
+
+barplot(sort(table(unlist(LIST(transdata))))[1:10]/9835,
+        horiz=TRUE,
+        las=1,
+        col='steelblue3',
+        xlab='',
+        main='Frequency, relative')
+
+#(v) What are the top 5 rules, sorted by support?
+inspect(sort(rules, by='support', decreasing = T)[1:5])
+
+#(vi) What are the top 5 rules, sorted by confidence?
+inspect(sort(rules, by='confidence', decreasing = T)[1:5])
+
+#(vii) What are the bottom 5 rules, sorted by support?
+inspect(sort(rules, by='support', decreasing = F)[1:5])
+
+#(viii) What are the bottom 5 rules, sorted by confidence?
+inspect(sort(rules, by='confidence', decreasing = F)[1:5])
+
+
+````
+
