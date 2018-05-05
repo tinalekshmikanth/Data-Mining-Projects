@@ -1,0 +1,203 @@
+---
+title: "HW4"
+author: "Tina"
+date: "4/28/2018"
+output: html_document
+---
+2.1
+```{r}
+files <- list.files("/Users/tinapraveen/Desktop/hw4.movies", full.names=T)
+
+library(textreuse)
+corpus <- TextReuseCorpus(files, tokenizer = tokenize_ngrams, n = 5,
+ keep_tokens = TRUE)
+##2.1.a
+names(corpus)
+
+
+#2.1.b
+d<-corpus[["user20"]]
+#2.b.i
+n <-stringr::str_count(d) 
+n
+#2.b.ii
+tokens(d)[1:5]
+
+``` 
+2.1.C
+
+```{r}
+res <- pairwise_candidates(pairwise_compare(corpus, jaccard_similarity))
+class(res)
+```
+
+
+```{r}
+#2.1.C.i
+#(i) How many pairs of users have a similarity score of at least 0.60?
+# zero
+
+res<-data.frame(res)
+Sim.6 <-res[res$score >0.6,]
+
+# 
+
+
+#2.1.C.ii
+#(ii) How many pairs of users have a similarity score of at least 0.50?
+#zero
+
+Sim.5 <-res[res$score > 0.5, ]
+#2.1.C.iii
+#(iii) How many pairs of users have a similarity score of at least 0.40?
+# Three
+
+Sim.4 <-res[res$score > 0.4, ]
+#2.1.C.iv
+#(iv) List all the pair of users who have a similarity score of at least 0.40.
+
+Sim.4
+
+#### Answer
+#           a       b     score
+#951  user151 user369 0.4758364
+#1539 user191 user317 0.4033613
+#1560 user191 user513 0.4358974
+```
+#2.1.D 
+
+```{r}
+#2.1.D i 
+lsh_probability(h = 100, b = 50, s = 0.60)
+lsh_threshold(h=100, b=50)
+# lsh_probability = 1 
+#Hashes=100
+#Band=50
+
+#2.1.D ii
+minhash <- minhash_generator(n=100, seed=100)
+corpus_new <- TextReuseCorpus(files, tokenizer = tokenize_ngrams, n = 5,
+                          minhash_func = minhash, keep_tokens = TRUE)
+
+doc <- corpus_new[["user20"]]
+minhashes(doc)[1:5]
+
+########################
+#output
+#[1] 1
+#[1] 0.1414214
+#Loading, tokenizing, and hashing 671 documents.
+#  |====================================================| 100%
+#[1] -2136030551 -2145695800 -2132100560 -2141561957
+#[5] -2137847953
+
+
+
+```
+#2.1.E
+```{r}
+buckets <- lsh(corpus_new, bands = 50)
+candidates <- lsh_candidates(buckets)
+res_new <- lsh_compare(candidates, corpus_new, jaccard_similarity)
+res_new<-data.frame(res_new) 
+#2.1.E i 
+Sim.6_new <-res_new[res_new$score >0.6, ]
+Sim.5_new <-res_new[res_new$score > 0.5, ]
+Sim.4_new <-res_new[res_new$score > 0.4, ]
+#2.1.E ii
+Sim.4_new <-res_new[res_new$score > 0.4, ]
+Sim.4_new
+# Answer
+#           a       b     score
+#951  user151 user369 0.4758364
+#1539 user191 user317 0.4033613
+#1560 user191 user513 0.4358974
+ 
+
+
+
+#2.1.E iii
+#yes
+
+#2.1.E iv
+# bruteforce method has done 224785 comparisons where LSH has taken 5526 comparisons to have the desired candidates. This is a save of 98% of work !!
+
+
+
+
+
+
+
+```
+#2.2
+My CWID is A20411284 and hence I have chosen to create a profile for user135 - Building user profile
+```{r}
+library(xlsx)
+myuser <-read.delim("/Users/tinapraveen/Desktop/hw4.movies/user135.txt", header = FALSE)
+names(myuser)<-"title"
+#nrow(myuser)
+userprofile <- as.data.frame(matrix(nrow = nrow(myuser), ncol = 21))
+names(userprofile) = c("MovieID","Action", "Adventure", "Animation", "Children", "Comedy","Crime", "Documentary",  "Drama","Fantasy","Film-Noir","Horror", "IMAX", "Musical","Mystery","Romance", "Sci-Fi",  "Thriller","War",  "Western", "(no genres listed)")
+
+
+profile_temp <-merge(myuser,movies,by.x = 'title')
+profile_temp <- profile_temp[  , -1]
+#userprofile<-cbind(profile_temp,userprofile)
+#userprofile <- userprofile[ ,-c(1,3)]
+profile_temp$genres <- as.character(profile_temp$genres)
+str(profile_temp)
+library(splitstackshape)
+profile_temp<-concat.split.multiple(data = profile_temp, split.cols = c("genres"), seps = "|")
+library(tidyverse)
+userprofile$MovieID <-profile_temp$movieId
+profile_temp<-profile_temp %>% remove_rownames %>% column_to_rownames(var="movieId")
+#for (i in 1:nrow(profile_temp)){
+#  for(j in 1:ncol(profile_temp)){
+#    userprofile_col= #which(colnames(userprofile)==profile_temp[i,j])
+#    userprofile[i,userprofile_col]<- 1
+    
+ # }
+#}
+
+#userprofile[-1] <-  t(vapply(strsplit(as.character(userprofile$genres), '|'), function(x) names(userprofile)[-1] %in% x, logical(ncol(userprofile)-1)))
+userprofile<-read.xlsx("/Users/tinapraveen/Desktop/myworkbook.xlsx", sheetName = "profile_temp2")
+userprofile[is.na(userprofile)] <- 0
+userprofile<-userprofile %>% remove_rownames %>% column_to_rownames(var="movieId")
+x <-apply(userprofile, 2, mean)
+
+```
+
+
+```{r}
+movies <-read.csv("/Users/tinapraveen/Desktop/movies.csv")
+#library(dplyr)
+library(lsa)
+mymovies <- sample_n(movies, 10)
+mymovienames <-as.data.frame(mymovies$title)
+names(mymovienames)[1]<-paste("Title")
+mymovienames$Title <- as.character(mymovienames$Title)
+mymovies<-read.xlsx("/Users/tinapraveen/Desktop/myworkbook2.xlsx", sheetName = "1")
+mymovies<-mymovies %>% remove_rownames %>% column_to_rownames(var="movieId")
+for (i in 1:10){
+  x <-as.numeric(as.vector(x))
+  y <-as.numeric(as.vector(mymovies[i,]))
+  cosine_sim <- cosine(x,y)
+  cosine_sim <- round(cosine_sim, digits=2)
+  print(paste(mymovienames[i,1],"with similarity",cosine_sim))
+}
+#########
+# Answer
+
+#Serpico (1973) with similarity 0.21"
+#[1] "Frantic (1988) with similarity 0.29"
+#[1] "Blue Chips (1994) with similarity 0.34"
+#[1] "Maid to Order (1987) with similarity 0.39"
+#[1] "Wages of Fear, The (Salaire de la peur, Le) (1953) with similarity 0.51"
+#[1] "MirrorMask (2005) with similarity 0.45"
+#[1] "Midnight Special (2015) with similarity 0.55"
+#[1] "Devil and Daniel Johnston, The (2005) with similarity 0.63"
+#[1] "Anne Frank Remembered (1995) with similarity 0.36"
+#[1] "Revolution Will Not Be Televised, The (a.k.a. Chavez: #Inside the Coup) (2003) with similarity 0.55"
+
+
+```
