@@ -1,0 +1,155 @@
+---
+title: "HW1"
+author: "Tina"
+date: "2/6/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+2.1.A
+```{r}
+setwd( "/Users/tinapraveen/desktop")
+college<-read.csv(file="college.csv",header=TRUE, sep=",")
+```
+2.1.B
+```{r}
+
+rownames(college)<- college[ ,1]
+#fix(college)
+college <- college [ , -1]
+#fix(college)
+```
+When I try to use fix function in mac , it opens in XQuartz and then conversion to html is stopped.Hence the statement is commented.
+2.1.C
+```{r}
+summary(college)
+pairs(college[1:10])
+boxplot(perc.alumni~ Private, data=college, main = "Alumni Donation" )
+boxplot(PhD~ Private, data=college, main = "PhD Employ " )
+Elite <- rep('No', nrow(college))
+Elite[college$Top10perc > 50] <- 'Yes'
+Elite <- as.factor(Elite)
+college <- data.frame(college, Elite)
+summary(college)
+```
+iii)Alumni in Private schools donate more to their colleges.
+iv)Public Schools employ more Ph.D.'s.
+v)There are 78 Elite colleges.
+
+```{r}
+#range(college$Enroll)
+#range(college$F.Undergrad)
+#range(college$Personal)
+#range(college$Expend)
+
+par(mfrow=c(2,2))
+hist(college$Enroll, 
+     main="Histogram for Number of students Enrolled", 
+     xlab="Applications", 
+     border="blue", 
+     col="green",
+     breaks=seq(35,6500,100))
+hist(college$F.Undergrad, 
+     main="Histogram for Number of F.T Under grads", 
+     xlab="FT UG", 
+     border="blue", 
+     col="green",
+     breaks=seq(100,33000,500))
+hist(college$Personal, 
+     main="Histogram for Personal Spending", 
+     xlab="Personal Spending", 
+     border="blue", 
+     col="green",
+     breaks=seq(200,7000,100))
+hist(college$Expend, 
+     main="Histogram for     Expenditure", 
+     xlab="Expenditure", 
+     border="blue", 
+     col="green",
+     breaks=seq(3000,60000,1500))
+
+ 
+```
+2.2.a
+```{r}
+library(ggplot2)
+library(GGally)
+library(lattice)
+nba<-read.csv(file="nba.csv",header=TRUE, sep=",")
+str(nba)
+ggcorr(nba, label = TRUE)
+model1<-lm(PTS~FG, data = nba)
+summary(model1)
+
+
+xyplot(PTS ~ FG, data = nba,  
+       panel = function(x, y) {
+         panel.xyplot(x, y)
+         panel.abline(lm(y ~ x))
+       }, 
+       xlab = "FG", 
+       ylab = "PTS ",
+       main = "Univariate linear regression")
+```
+We can see that FG and PTS are highly coorelated at  0.9 . Summary shows that R-squared is.9166 which means that the model can explain 91.6 % of the variance.
+```{r}
+set.seed(1122)
+index <- sample(1:nrow(nba), 250)
+train <- nba[index, ]
+test <- nba[-index, ]
+library(psych)
+pairs.panels(train[18:23])
+cor(nba$FG,nba$PTS)
+cor(nba$X3P,nba$PTS)
+cor(nba$FTA,nba$PTS)
+cor(nba$TOT,nba$PTS)
+cor(nba$X3PA,nba$PTS)
+cor(nba$DR,nba$PTS)
+
+model2 <- lm(PTS ~ FG + X3P + FTA + MIN , data=train)
+summary(model2)
+model3 <- lm(PTS ~ FG + X3P + FTA + X3PA + DR , data=train)
+summary(model3)
+model4 <- lm(PTS ~FG+FGA+X3P+FTA+TOT+A, data=train)
+summary(model4)
+plot(model4, 1) 
+hist(model4$residuals, xlab = "Model Residuals", 
+     main="NBA Residual Histogram")
+x <- -7:7
+lines(x, 240*dnorm(x, 0, sd(model4$residuals)), col=2)
+
+
+```
+In model 2, MIN is insignificant and R squared is 0.99.
+In model 3 , X3PA and DR are insignificant and the next model, model4 uses the variables,FG,FGA,X3P,FTA,TOT,A and indicates that FGA , TOT and A are not significant.
+R squared for the model is 0.9944 and high F-statistic indicate that the model fits the data well.
+
+
+PREDICTION
+```{r}
+res <-predict(model4, test)
+testdf <- data.frame(cbind(test$PTS , res))
+testdf$equals <- NULL
+testdf[testdf$V1 != testdf$res,"equals"] <- "1"
+b <- sum(is.na(testdf$equals))
+cat(paste(" Number of fitted values matched (exactly) the PTS in the test dataset:",b))
+print(b)
+
+n <- dim(test)[1]
+p <- 6
+RSS  <- sum((test$PTS - res)^2)
+RSE  <- sqrt(1/(n-p-1)*RSS) # 
+TSS  <- sum((test$PTS - mean(test$PTS))^2)
+Fstat   <- ((TSS - RSS)/3)/(RSS/(n-p-1))
+R.sq <- cor(test$PTS, res)^2
+cat(paste("Manually calculated R-Sq. is", R.sq))
+cat(paste(" RSE in the test dataset:",RSE))
+cat(paste(" TSS in the test dataset:",TSS))
+cat(paste(" F-statistic in the test dataset:",Fstat))
+cat(paste(" RSS in the test dataset:",RSS))
+
+```
+
+ -
